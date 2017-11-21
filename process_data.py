@@ -24,7 +24,7 @@ def process_training_data(num_clips):
     for clip_num in range(num_prev_clips, num_clips + num_prev_clips):
         clip = process_clip()
 
-        np.savez_compressed(c.TRAIN_DIR_CLIPS + str(clip_num), clip)
+        np.savez_compressed(os.path.join(c.TRAIN_DIR_CLIPS, str(clip_num)), clip)
 
         if (clip_num + 1) % 100 == 0: print('Processed %d clips' % (clip_num + 1))
 
@@ -41,12 +41,11 @@ def main():
     ##
     # Handle command line input
     ##
-
     num_clips = 5000000
 
     try:
-        opts, _ = getopt.getopt(sys.argv[1:], 'n:t:c:oH',
-                                ['num_clips=', 'train_dir=', 'clips_dir=', 'overwrite', 'help'])
+        opts, _ = getopt.getopt(sys.argv[1:], 'n:t:c:o:y:H',
+                                ['num_clips=', 'train_dir=', 'clips_dir=', 'overwrite', 'youtube', 'help'])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -60,23 +59,29 @@ def main():
             c.TRAIN_DIR_CLIPS = c.get_dir(arg)
         if opt in ('-o', '--overwrite'):
             c.clear_dir(c.TRAIN_DIR_CLIPS)
+        if opt in ('-y', '--youtube'):
+            train_from_youtube_list = True
         if opt in ('-H', '--help'):
             usage()
             sys.exit(2)
 
-    """
+    
     # set train frame dimensions
     assert os.path.exists(c.TRAIN_DIR)
-    c.FULL_HEIGHT, c.FULL_WIDTH = c.get_train_frame_dims()
+    #c.FULL_HEIGHT, c.FULL_WIDTH = c.get_train_frame_dims()
 
     ##
     # Process data for training
     ##
     process_training_data(num_clips)
+    
+    
+    """
+    if train_from_youtube_list:
+        yt.process_training_data_youtube("../train_partition.txt", num_clips);
+    #yt.download_list_youtube("../train_partition.txt")
     """
     
-    yt.process_training_data_youtube("..\yt_list.txt", 100);
-
 
 if __name__ == '__main__':
     main()

@@ -90,7 +90,7 @@ TRAIN_HEIGHT = TRAIN_WIDTH = 32
 
 YOUTUBE_LIST = None
 YOUTUBE_COUNT = 0
-DOWNLOAD_DIR = os.path.join(DATA_DIR, 'Downloads/')
+DOWNLOAD_DIR = get_dir(os.path.join(DATA_DIR, 'Downloads/'))
 
 ##
 # Output

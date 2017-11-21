@@ -6,6 +6,7 @@ import constants as c
 import utils
 from glob import glob
 import cv2
+import time
 
 GLOBAL_LOCK = threading.Lock()
 GLOBAL_CLIP_NUM = 0
@@ -38,34 +39,71 @@ def on_complete_download(stream, file_handle):
     if (clip_num + 1) % 100 == 0: 
         print('Processed %d clips' % (clip_num + 1))
 
-def download_youtube_video(url):
+def download_youtube_video(url, on_complete_callback = None):
     try:
         yt = YouTube(url)
-        yt.register_on_complete_callback(on_complete_download)
+        yt.register_on_complete_callback(on_complete_callback)
         stream = yt.streams.filter(progressive=True).order_by('resolution').desc().first()
         stream.download(c.DOWNLOAD_DIR)
+        print("Downloading: {}".format(url)) 
     except:
         print("Failed: {}".format(url))    
 
+def get_full_clips(data_dir, num_clips):
+    """
+    Loads a batch of random clips from the unprocessed train or test data.
+    NOTE: the target frame was moved to be the last one. 
+    [<HIST_LEN/2 before frames> | <HIST_LEN/2 after  frames> | <frame to be interpolated>]
+
+    @param data_dir: The directory of the data to read. Should be either c.TRAIN_DIR or c.TEST_DIR.
+    @param num_clips: The number of clips to read.
+
+    @return: An array of shape
+             [num_clips, c.TRAIN_HEIGHT, c.TRAIN_WIDTH, (3 * (c.HIST_LEN + 1))].
+             A batch of frame sequences with values normalized in range [-1, 1].
+    """
+    while True:
+        video = np.random.choice(glob(os.path.join(data_dir, '*')))
+        ok, clips_rgb = full_clips_from_video(video, num_clips)
+        if ok: 
+            break
+        
+    shape = np.shape(clips_rgb)
+    clips = np.empty([num_clips,
+                      shape[1],
+                      shape[2],
+                      (3 * (c.HIST_LEN + 1))])
+    
+    middle = int(c.HIST_LEN / 2)
+    frame_indices = list(i for j in (range(middle), [c.HIST_LEN], range(middle, c.HIST_LEN)) for i in j) # in cosa mi sta trasformando python?
+    for clip_num in range(num_clips):
+        for frame_num in frame_indices:
+            clips[clip_num, :, :, frame_num * 3:(frame_num + 1) * 3] = utils.normalize_frames(clips_rgb[clip_num, :, :, frame_num * 3:(frame_num + 1) * 3])
+
+    return clips
+
 def full_clips_from_video(video, num_clips):
-    stream      = cv2.VideoCapture(video)
+    stream      = cv2.VideoCapture(video) #TODO: cv2 legge in BGR, convertire in RGB?
     width       = int(stream.get(cv2.CAP_PROP_FRAME_WIDTH))
     height      = int(stream.get(cv2.CAP_PROP_FRAME_HEIGHT))
     frame_count = int(stream.get(cv2.CAP_PROP_FRAME_COUNT))
-
+    if frame_count < c.HIST_LEN + 1 or width == 0 or height == 0:
+        print('Errore lettura file: {}'.format(video))
+        return (False, None)
+    
     clips = np.empty([num_clips,
                     height,#c.FULL_HEIGHT,
                     width,#c.FULL_WIDTH,
                     (3 * (c.HIST_LEN + 1))])
 
-    start_frame = np.random.randint(frame_count - c.HIST_LEN)
-    stream.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-    for index in range(num_clips):
-        _, frame = stream.read()
-        #clips[index] = cv2.resize(frame, c.FULL_WIDTH, c.FULL_HEIGHT)
+    start_frames = np.random.randint(0, frame_count - c.HIST_LEN, num_clips)
+    for clip_index in range(num_clips):
+        stream.set(cv2.CAP_PROP_POS_FRAMES, start_frames[clip_index])
+        for frame_index in range(c.HIST_LEN + 1):
+            _, frame = stream.read()
+            clips[clip_index, :, :, 3 * frame_index : 3 * (frame_index + 1)] = frame
     stream.release()
-
-    return clips
+    return (True, clips)
 
 def process_training_data_youtube(url_list_file, num_clips):
     global GLOBAL_CLIP_NUM
@@ -80,4 +118,16 @@ def process_training_data_youtube(url_list_file, num_clips):
 
     for clip_num in range(num_prev_clips, num_clips + num_prev_clips):
         url = np.random.choice(urls)
-        download_youtube_video(url)
+        download_youtube_video(url, on_complete_download)
+        time.sleep(1)
+        
+def download_list_youtube(url_list_file):
+    urls = []
+    with open(url_list_file) as file:
+        for line in file:   
+            url = line.split()[0]
+            download_youtube_video(url)
+            im_not_a_robot_i_swear_look_im_so_random = np.random.rand() * 2;
+            time.sleep(1 + im_not_a_robot_i_swear_look_im_so_random)
+        
+        

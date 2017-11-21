@@ -9,6 +9,8 @@ import cv2
 import constants as c
 from tfutils import log10
 
+import youtube_clips as yt
+
 ##
 # Data
 ##
@@ -47,6 +49,8 @@ def clip_l2_diff(clip):
 	@param clip: A numpy array of shape [c.TRAIN_HEIGHT, c.TRAIN_WIDTH, (3 * (c.HIST_LEN + 1))].
 	@return: The sum of l2 differences between the frame pixels of each sequential pair of frames.
 	"""
+
+	#assert(clip.dtype == 'float64')
 	diff = 0
 	for i in range(c.HIST_LEN):
 		frame = clip[:, :, 3 * i:3 * (i + 1)]
@@ -74,32 +78,24 @@ def get_full_clips(data_dir, num_clips):
 					  c.FULL_WIDTH,
 					  (3 * (c.HIST_LEN + 1))])
 
+	# CLIPS FROM DIRECTORIES OF IMAGES
+	
 	# get num_clips random episodes
 	ep_dirs = np.random.choice(glob(os.path.join(data_dir, '*')), num_clips)
 
 	# get a random clip of length HIST_LEN + 1 from each episode
+	middle = int(c.HIST_LEN / 2)
+	frame_indices = list(i for j in (range(middle), [c.HIST_LEN + 1], range(middle, c.HIST_LEN)) for i in j) 
 	for clip_num, ep_dir in enumerate(ep_dirs):
 		ep_frame_paths = sorted(glob(os.path.join(ep_dir, '*')))
 		start_index = np.random.choice(len(ep_frame_paths) - c.HIST_LEN)
 		clip_frame_paths = ep_frame_paths[start_index:start_index + c.HIST_LEN + 1]
 
 		# read in frames
-		middle = int(c.HIST_LEN / 2)
 		for frame_num in range(middle):
-			# HIST_LEN/2 before frames
-			frame_before = imread(clip_frame_paths[frame_num], mode='RGB')
-			norm_frame_before = normalize_frames(frame_before)
-			clips[clip_num, :, :, frame_num * 3:(frame_num + 1) * 3] = norm_frame_before
-
-			# HIST_LEN/2 after frames
-			frame_after = imread(clip_frame_paths[frame_num + middle + 1], mode='RGB')
-			norm_frame_after = normalize_frames(frame_after)
-			clips[clip_num, :, :, (frame_num + middle) * 3:(frame_num + middle + 1) * 3] = norm_frame_after
-
-		# frame to interpolate
-		frame_target = imread(clip_frame_paths[middle], mode='RGB')
-		norm_frame_target = normalize_frames(frame_target)
-		clips[clip_num, :, :, 3 * c.HIST_LEN:] = norm_frame_target
+			frame = imread(clip_frame_paths[frame_num], mode='RGB')
+			norm_frame = normalize_frames(frame)
+			clips[clip_num, :, :, frame_num * 3:(frame_num + 1) * 3] = norm_frame
 
 	return clips
 
@@ -110,15 +106,19 @@ def process_clip():
 	@return: An array of shape [c.TRAIN_HEIGHT, c.TRAIN_WIDTH, (3 * (c.HIST_LEN + 1))].
 			 A frame sequence with values normalized in range [-1, 1].
 	"""
-	clip = get_full_clips(c.TRAIN_DIR, 1)[0]
-
+	#clip = get_full_clips(c.TRAIN_DIR, 1)[0]
+	clip = yt.get_full_clips(c.TRAIN_DIR, 1)[0]
+	shape = np.shape(clip)
+	height = shape[0]
+	width = shape[1]
+	
 	# Randomly crop the clip. With 0.05 probability, take the first crop offered, otherwise,
 	# repeat until we have a clip with movement in it.
 	take_first = np.random.choice(2, p=[0.95, 0.05])
 	cropped_clip = np.empty([c.TRAIN_HEIGHT, c.TRAIN_WIDTH, 3 * (c.HIST_LEN + 1)])
 	for i in range(100):  # cap at 100 trials in case the clip has no movement anywhere
-		crop_x = np.random.choice(c.FULL_WIDTH - c.TRAIN_WIDTH + 1)
-		crop_y = np.random.choice(c.FULL_HEIGHT - c.TRAIN_HEIGHT + 1)
+		crop_x = np.random.choice(width - c.TRAIN_WIDTH + 1)
+		crop_y = np.random.choice(height - c.TRAIN_HEIGHT + 1)
 		cropped_clip = clip[crop_y:crop_y + c.TRAIN_HEIGHT, crop_x:crop_x + c.TRAIN_WIDTH, :]
 
 		if take_first or clip_l2_diff(cropped_clip) > c.MOVEMENT_THRESHOLD:
