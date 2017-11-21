@@ -77,8 +77,9 @@ def get_full_clips(data_dir, num_clips):
     middle = int(c.HIST_LEN / 2)
     frame_indices = list(i for j in (range(middle), [c.HIST_LEN], range(middle, c.HIST_LEN)) for i in j) # in cosa mi sta trasformando python?
     for clip_num in range(num_clips):
-        for frame_num in frame_indices:
-            clips[clip_num, :, :, frame_num * 3:(frame_num + 1) * 3] = utils.normalize_frames(clips_rgb[clip_num, :, :, frame_num * 3:(frame_num + 1) * 3])
+        for frame_index_src in range(c.HIST_LEN + 1):
+            frame_index_dest = frame_indices[frame_index_src]
+            clips[clip_num, :, :, frame_index_dest * 3:(frame_index_dest + 1) * 3] = utils.normalize_frames(clips_rgb[clip_num, :, :, frame_index_src * 3:(frame_index_src + 1) * 3])
 
     return clips
 
