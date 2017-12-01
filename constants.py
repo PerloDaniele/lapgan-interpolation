@@ -83,8 +83,8 @@ MOVEMENT_THRESHOLD = 100
 NUM_CLIPS = len(glob(TRAIN_DIR_CLIPS + '*'))
 
 # the height and width of the full frames to test on. Set in avg_runner.py or process_data.py main.
-FULL_HEIGHT = 210
-FULL_WIDTH = 160
+FULL_HEIGHT = 600
+FULL_WIDTH = 600
 # the height and width of the patches to train on
 TRAIN_HEIGHT = TRAIN_WIDTH = 32
 
@@ -147,8 +147,7 @@ ADVERSARIAL = True
 # the training minibatch size
 BATCH_SIZE = 8
 # the number of history frames to give as input to the network
-HIST_LEN = 2
-HIST_LEN = HIST_LEN * 2
+HIST_LEN = 4
 
 ##
 # Loss parameters

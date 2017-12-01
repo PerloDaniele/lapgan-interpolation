@@ -166,7 +166,7 @@ class DiscriminatorModel:
         ##
         # Train
         ##
-
+        input_frames = np.clip(input_frames, -1.0, 1.0) #TODO
         feed_dict = self.build_feed_dict(input_frames, gt_output_frames, generator)
 
         _, global_loss, global_step, summaries = self.sess.run(

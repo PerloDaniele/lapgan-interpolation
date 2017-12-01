@@ -62,12 +62,13 @@ def get_full_clips(data_dir, num_clips):
              [num_clips, c.TRAIN_HEIGHT, c.TRAIN_WIDTH, (3 * (c.HIST_LEN + 1))].
              A batch of frame sequences with values normalized in range [-1, 1].
     """
+    video_list = glob(os.path.join(data_dir, '*'))
     while True:
-        video = np.random.choice(glob(os.path.join(data_dir, '*')))
+        video = np.random.choice(video_list)
         ok, clips_rgb = full_clips_from_video(video, num_clips)
         if ok: 
             break
-        
+    
     shape = np.shape(clips_rgb)
     clips = np.empty([num_clips,
                       shape[1],
@@ -81,13 +82,16 @@ def get_full_clips(data_dir, num_clips):
             frame_index_dest = frame_indices[frame_index_src]
             clips[clip_num, :, :, frame_index_dest * 3:(frame_index_dest + 1) * 3] = utils.normalize_frames(clips_rgb[clip_num, :, :, frame_index_src * 3:(frame_index_src + 1) * 3])
 
+    assert(np.max(clips) <= 1.0)
+    assert(np.min(clips) >= -1.0)
     return clips
 
 def full_clips_from_video(video, num_clips):
     stream      = cv2.VideoCapture(video) #TODO: cv2 legge in BGR, convertire in RGB?
     width       = int(stream.get(cv2.CAP_PROP_FRAME_WIDTH))
     height      = int(stream.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    frame_count = int(stream.get(cv2.CAP_PROP_FRAME_COUNT))
+    frame_rate  = int(stream.get(cv2.CAP_PROP_FPS))
+    frame_count = int(stream.get(cv2.CAP_PROP_FRAME_COUNT) - frame_rate)
     if frame_count < c.HIST_LEN + 1 or width == 0 or height == 0:
         print('Errore lettura file: {}'.format(video))
         return (False, None)
@@ -98,11 +102,17 @@ def full_clips_from_video(video, num_clips):
                     (3 * (c.HIST_LEN + 1))])
 
     start_frames = np.random.randint(0, frame_count - c.HIST_LEN, num_clips)
+    #print(str(start_frames) + ' / ' + str(frame_count))
     for clip_index in range(num_clips):
         stream.set(cv2.CAP_PROP_POS_FRAMES, start_frames[clip_index])
         for frame_index in range(c.HIST_LEN + 1):
-            _, frame = stream.read()
+            ret, frame = stream.read()
+            if not ret:
+                print('Errore lettura frame!')
+                stream.release()
+                return full_clips_from_video(video, num_clips)
             clips[clip_index, :, :, 3 * frame_index : 3 * (frame_index + 1)] = frame
+            
     stream.release()
     return (True, clips)
 

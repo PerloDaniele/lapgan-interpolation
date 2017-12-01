@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
-from scipy.ndimage import imread
+#from scipy.ndimage import imread
+from cv2 import imread
 from glob import glob
 import os
 
@@ -23,10 +24,12 @@ def normalize_frames(frames):
 
 	@return: The normalized frames.
 	"""
-	new_frames = frames.astype(np.float32)
-	new_frames /= (255 / 2)
+	
+	new_frames = frames.astype(np.float32)	
+	#new_frames /= (255 / 2) 
+	new_frames = (new_frames / 255.0) * 2.0
 	new_frames -= 1
-
+		
 	return new_frames
 
 def denormalize_frames(frames):

@@ -1,7 +1,6 @@
 import tensorflow as tf
 import numpy as np
-#from scipy.misc import imsave
-from cv2 import imwrite
+from scipy.misc import imsave
 from skimage.transform import resize
 from copy import deepcopy
 import os
@@ -10,9 +9,6 @@ import constants as c
 from loss_functions import combined_loss
 from utils import psnr_error, sharp_diff_error, normalize_frames, denormalize_frames
 from tfutils import w, b
-
-def imsave(path, img):
-    imwrite(path, denormalize_frames(img))
 
 # noinspection PyShadowingNames
 class GeneratorModel:
@@ -68,13 +64,16 @@ class GeneratorModel:
                     tf.float32, shape=[None, self.height_train, self.width_train, 3])
 
                 self.input_frames_test = tf.placeholder(
-                    tf.float32, shape=[None, self.height_test, self.width_test, 3 * c.HIST_LEN])
+                    tf.float32, shape=[None, None, None, 3 * c.HIST_LEN])
                 self.gt_frames_test = tf.placeholder(
-                    tf.float32, shape=[None, self.height_test, self.width_test, 3])
+                    tf.float32, shape=[None, None, None, 3])
 
                 # use variable batch_size for more flexibility
                 self.batch_size_train = tf.shape(self.input_frames_train)[0]
                 self.batch_size_test = tf.shape(self.input_frames_test)[0]
+                
+                self.height_test = tf.shape(self.input_frames_train)[1]
+                self.width_test = tf.shape(self.input_frames_train)[2]
 
             ##
             # Scale network setup and calculation
@@ -176,8 +175,8 @@ class GeneratorModel:
                             last_scale_pred_test = None
 
                         # calculate
-                        test_preds, test_gts = calculate(self.height_test,
-                                                         self.width_test,
+                        test_preds, test_gts = calculate(self.sess.run(self.height_test),
+                                                         self.sess.run(self.width_test),
                                                          self.input_frames_test,
                                                          self.gt_frames_test,
                                                          last_scale_pred_test)
@@ -192,8 +191,7 @@ class GeneratorModel:
                 # global loss is the combined loss from every scale network
                 self.global_loss = combined_loss(self.scale_preds_train,
                                                  self.scale_gts_train,
-                                                 self.d_scale_preds,
-                                                 c.LAM_ADV, c.LAM_ADV, c.LAM_GDL)
+                                                 self.d_scale_preds)
                 self.global_step = tf.Variable(0, trainable=False)
                 self.optimizer = tf.train.AdamOptimizer(learning_rate=c.LRATE_G, name='optimizer')
                 self.train_op = self.optimizer.minimize(self.global_loss,

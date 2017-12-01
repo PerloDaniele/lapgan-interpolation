@@ -19,8 +19,7 @@ def process_training_data(num_clips):
 
     @warning: This can take a couple of hours to complete with large numbers of clips.
     """
-    num_prev_clips = len(glob(c.TRAIN_DIR_CLIPS + '*'))
-
+    num_prev_clips = len(glob(c.TRAIN_DIR_CLIPS + '*.npz'))
     for clip_num in range(num_prev_clips, num_clips + num_prev_clips):
         clip = process_clip()
 

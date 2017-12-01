@@ -1,0 +1,13 @@
+#!/bin/sh
+GPU_INDEX=0
+CUDA_VISIBLE_DEVICES=${GPU_INDEX} python avg_runner.py --steps=100000 --clips_dir=../ClipsHISTLEN4/ --summary_freq=1000 --stats_freq=1000 --img_save_freq=10000 --model_save_freq=50000 --adv_w=1 --lp_w=0.8 --gdl_w=1 --name=TrainHISTLEN4_1_08_1
+CUDA_VISIBLE_DEVICES=${GPU_INDEX} python avg_runner.py --steps=100000 --clips_dir=../ClipsHISTLEN4/ --summary_freq=1000 --stats_freq=1000 --img_save_freq=10000 --model_save_freq=50000 --adv_w=1 --lp_w=0.6 --gdl_w=1 --name=TrainHISTLEN4_1_06_1
+CUDA_VISIBLE_DEVICES=${GPU_INDEX} python avg_runner.py --steps=100000 --clips_dir=../ClipsHISTLEN4/ --summary_freq=1000 --stats_freq=1000 --img_save_freq=10000 --model_save_freq=50000 --adv_w=1 --lp_w=0.4 --gdl_w=1 --name=TrainHISTLEN4_1_04_1
+CUDA_VISIBLE_DEVICES=${GPU_INDEX} python avg_runner.py --steps=100000 --clips_dir=../ClipsHISTLEN4/ --summary_freq=1000 --stats_freq=1000 --img_save_freq=10000 --model_save_freq=50000 --adv_w=1 --lp_w=1 --gdl_w=1.2 --name=TrainHISTLEN4_1_1_12
+CUDA_VISIBLE_DEVICES=${GPU_INDEX} python avg_runner.py --steps=100000 --clips_dir=../ClipsHISTLEN4/ --summary_freq=1000 --stats_freq=1000 --img_save_freq=10000 --model_save_freq=50000 --adv_w=1 --lp_w=1 --gdl_w=1.4 --name=TrainHISTLEN4_1_1_14
+CUDA_VISIBLE_DEVICES=${GPU_INDEX} python avg_runner.py --steps=100000 --clips_dir=../ClipsHISTLEN4/ --summary_freq=1000 --stats_freq=1000 --img_save_freq=10000 --model_save_freq=50000 --adv_w=1 --lp_w=1 --gdl_w=1.6 --name=TrainHISTLEN4_1_1_16
+CUDA_VISIBLE_DEVICES=${GPU_INDEX} python avg_runner.py --steps=100000 --clips_dir=../ClipsHISTLEN4/ --summary_freq=1000 --stats_freq=1000 --img_save_freq=10000 --model_save_freq=50000 --adv_w=1 --lp_w=1 --gdl_w=1.8 --name=TrainHISTLEN4_1_1_18
+CUDA_VISIBLE_DEVICES=${GPU_INDEX} python avg_runner.py --steps=100000 --clips_dir=../ClipsHISTLEN4/ --summary_freq=1000 --stats_freq=1000 --img_save_freq=10000 --model_save_freq=50000 --adv_w=1.2 --lp_w=1 --gdl_w=1 --name=TrainHISTLEN4_12_1_1
+CUDA_VISIBLE_DEVICES=${GPU_INDEX} python avg_runner.py --steps=100000 --clips_dir=../ClipsHISTLEN4/ --summary_freq=1000 --stats_freq=1000 --img_save_freq=10000 --model_save_freq=50000 --adv_w=1.4 --lp_w=1 --gdl_w=1 --name=TrainHISTLEN4_14_1_1
+CUDA_VISIBLE_DEVICES=${GPU_INDEX} python avg_runner.py --steps=100000 --clips_dir=../ClipsHISTLEN4/ --summary_freq=1000 --stats_freq=1000 --img_save_freq=10000 --model_save_freq=50000 --adv_w=1.6 --lp_w=1 --gdl_w=1 --name=TrainHISTLEN4_16_1_1
+CUDA_VISIBLE_DEVICES=${GPU_INDEX} python avg_runner.py --steps=100000 --clips_dir=../ClipsHISTLEN4/ --summary_freq=1000 --stats_freq=1000 --img_save_freq=10000 --model_save_freq=50000 --adv_w=1.8 --lp_w=1 --gdl_w=1 --name=TrainHISTLEN4_18_1_1

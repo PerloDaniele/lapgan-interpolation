@@ -2,7 +2,9 @@ import tensorflow as tf
 import getopt
 import sys
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 
+from glob import glob
 from utils import get_train_batch, get_test_batch
 import constants as c
 from g_model import GeneratorModel
@@ -22,6 +24,8 @@ class AVGRunner:
         self.num_steps = num_steps
 
         self.sess = tf.Session()
+        #self.sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True))
+
         self.summary_writer = tf.summary.FileWriter(c.SUMMARY_SAVE_DIR, graph=self.sess.graph)
 
         if c.ADVERSARIAL:
@@ -82,8 +86,8 @@ class AVGRunner:
                 print('-' * 30)
 
             # test generator model
-            if self.global_step % c.TEST_FREQ == 0:
-                self.test()
+            #if self.global_step % c.TEST_FREQ == 0:
+                #self.test()
 
     def test(self):
         """
@@ -100,6 +104,7 @@ def usage():
     print('Options:')
     print('-l/--load_path=    <Relative/path/to/saved/model>')
     print('-t/--test_dir=     <Directory of test images>')
+    print('-c/--clips_dir=     <Directory of training clips. Default=../Data/.Clips>')
     print('-a/--adversarial=  <{t/f}> (Whether to use adversarial training. Default=True)')
     print('-n/--name=         <Subdirectory of ../Data/Save/*/ in which to save output of this run>')
     print('-s/--steps=        <Number of training steps to run> (Default=1000001)')
@@ -122,11 +127,11 @@ def main():
     test_only = False
     num_steps = 1000001
     try:
-        opts, _ = getopt.getopt(sys.argv[1:], 'l:t:r:a:n:s:OTH',
+        opts, _ = getopt.getopt(sys.argv[1:], 'l:t:r:a:n:s:c:g:OTH',
                                 ['load_path=', 'test_dir=', 'adversarial=', 'name=',
                                  'steps=', 'overwrite', 'test_only', 'help', 'stats_freq=',
                                  'summary_freq=', 'img_save_freq=', 'test_freq=',
-                                 'model_save_freq='])
+                                 'model_save_freq=', 'clips_dir=', 'adv_w=', 'lp_w=', 'gdl_w='])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -159,10 +164,20 @@ def main():
             c.TEST_FREQ = int(arg)
         if opt == '--model_save_freq':
             c.MODEL_SAVE_FREQ = int(arg)
-
+        if opt in ('-c', '--clips_dir'):
+            c.TRAIN_DIR_CLIPS = arg
+            c.NUM_CLIPS = len(glob(c.TRAIN_DIR_CLIPS + '*'))
+        if opt in ('--adv_w'):
+            c.LAM_ADV = float(arg)
+        if opt in ('--lp_w'):
+            c.LAM_LP = float(arg)
+        if opt in ('--gdl_w'):
+            c.LAM_GDL = float(arg)
+            
+            
     # set test frame dimensions
-    assert os.path.exists(c.TEST_DIR)
-    c.FULL_HEIGHT, c.FULL_WIDTH = c.get_test_frame_dims()
+    #assert os.path.exists(c.TEST_DIR)
+    #c.FULL_HEIGHT, c.FULL_WIDTH = c.get_test_frame_dims()
 
     ##
     # Init and run the predictor
