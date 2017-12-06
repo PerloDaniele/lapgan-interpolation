@@ -47,21 +47,21 @@ def main():
 			input_frames[0, :, :, j*3:(j+1)*3] = images[i - h + j]
 			input_frames[0, :, :, (n - j - 1)*3:(n - j)*3] = images[i + h - j]
 
-		'''
+		
 		gen_frame = runner.g_model.generate_image(input_frames)[0]
 		mae = mean_absolute_error(gen_frame, images[i])
 		print(mae)
 
 		split_name  = os.path.splitext(os.path.basename(image_paths[i]))
 		name = os.path.join(dir_out, split_name[0] + "_gen" + split_name[1])
-		print(name)
 		cv2.imwrite(name, gen_frame)
+		
 		'''
-
 		batch = np.empty([1, c.FULL_HEIGHT, c.FULL_WIDTH, 3 * (c.HIST_LEN + 1)])
 		batch[0, :, :, :3 * c.HIST_LEN] = normalize_frames(input_frames)
 		batch[0, :, :, 3 * c.HIST_LEN:] = normalize_frames(images[i])
 		runner.g_model.test_batch(batch, 420)
+		'''
 
 def mean_absolute_error(A, B):
 	floatA = A.astype(np.float)
