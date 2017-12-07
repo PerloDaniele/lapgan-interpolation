@@ -80,7 +80,7 @@ TRAIN_DIR_CLIPS = get_dir(os.path.join(DATA_DIR, '.Clips/'))
 # For processing clips. l2 diff between frames must be greater than this
 MOVEMENT_THRESHOLD = 100
 # total number of processed clips in TRAIN_DIR_CLIPS
-NUM_CLIPS = len(glob(TRAIN_DIR_CLIPS + '*'))
+NUM_CLIPS = len(glob(TRAIN_DIR_CLIPS + '*.npz'))
 
 # the height and width of the full frames to test on. Set in avg_runner.py or process_data.py main.
 FULL_HEIGHT = 600
@@ -145,7 +145,7 @@ MODEL_SAVE_FREQ = 10000  # how often to save the model, in # steps
 # whether to use adversarial training vs. basic training of the generator
 ADVERSARIAL = True
 # the training minibatch size
-BATCH_SIZE = 8
+BATCH_SIZE = 128
 # the number of history frames to give as input to the network
 HIST_LEN = 4
 
@@ -169,7 +169,7 @@ LAM_GDL = 1
 ##
 
 # learning rate for the generator model
-LRATE_G = 0.00004  # Value in paper is 0.04
+LRATE_G = 0.04  # Value in paper is 0.04
 # padding for convolutions in the generator model
 PADDING_G = 'SAME'
 # feature maps for each convolution of each scale network in the generator model
@@ -190,7 +190,7 @@ SCALE_KERNEL_SIZES_G = [[3, 3, 3, 3],
 ##
 
 # learning rate for the discriminator model
-LRATE_D = 0.02
+LRATE_D = 0.002
 # padding for convolutions in the discriminator model
 PADDING_D = 'VALID'
 # feature maps for each convolution of each scale network in the discriminator model
