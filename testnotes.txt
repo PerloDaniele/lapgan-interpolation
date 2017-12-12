@@ -1,0 +1,9 @@
+TrainNewH4_32 730k iterazioni, blu
+TrainHISTLEN4_LRateD x
+TrainHISTLEN4_LRateG x
+TrainHISTLEN4_16 x
+
+TrainNewH4 400k iterazioni, rosso
+TrainHISTLEN4_1_04_1 140k iterazioni
+TrainHISTLEN4_1_1_18 x
+TrainHISTLEN4_18_1_1 x

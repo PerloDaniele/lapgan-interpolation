@@ -131,7 +131,7 @@ def main():
                                 ['load_path=', 'test_dir=', 'adversarial=', 'name=',
                                  'steps=', 'overwrite', 'test_only', 'help', 'stats_freq=',
                                  'summary_freq=', 'img_save_freq=', 'test_freq=',
-                                 'model_save_freq=', 'clips_dir=', 'adv_w=', 'lp_w=', 'gdl_w=' , 'b_size=' , 'lrateG=', 'lrateD='] )
+                                 'model_save_freq=', 'clips_dir=', 'adv_w=', 'lp_w=', 'gdl_w=' , 'batch_size=' , 'lrateG=', 'lrateD='] )
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -173,7 +173,7 @@ def main():
             c.LAM_LP = float(arg)
         if opt in ('--gdl_w'):
             c.LAM_GDL = float(arg)
-        if opt in ('--b_size'):
+        if opt in ('--batch_size'):
             c.BATCH_SIZE = int(arg)
         if opt in ('--lrateG'):
             c.LRATE_G = float(arg)
