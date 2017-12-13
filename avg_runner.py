@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 import getopt
 import sys
 import os
@@ -93,10 +94,21 @@ class AVGRunner:
         """
         Runs one test step on the generator network.
         """
+        
+        '''
         batch = get_test_batch(c.BATCH_SIZE)
+        '''
+        batch = np.empty([c.BATCH_SIZE, c.FULL_HEIGHT, c.FULL_WIDTH, (3 * (c.HIST_LEN + 1))],
+                     dtype=np.float32)
+        
+        for i in range(c.BATCH_SIZE):
+            path = c.TEST_DIR + str(np.random.choice(c.NUM_TEST_CLIPS)) + '.npz'
+            clip = np.load(path)['arr_0']
+            batch[i] = clip
+                    
         self.g_model.test_batch(
             batch, self.global_step)
-
+        
     #def make_video(self, source, dest=None, double_framerate=True)
 
 
@@ -140,7 +152,14 @@ def main():
         if opt in ('-l', '--load_path'):
             load_path = arg
         if opt in ('-t', '--test_dir'):
-            c.set_test_dir(arg)
+            c.TEST_DIR = arg
+            c.NUM_TEST_CLIPS = len(glob(c.TEST_DIR + '*.npz'))
+            if c.NUM_TEST_CLIPS>0:
+                path = c.TEST_DIR + '0.npz'
+                clip = np.load(path)['arr_0']
+                c.FULL_HEIGHT = clip.shape[0]
+                c.FULL_WIDTH  = clip.shape[1]
+            #c.set_test_dir(arg)
         if opt in ('-a', '--adversarial'):
             c.ADVERSARIAL = (arg.lower() == 'true' or arg.lower() == 't')
         if opt in ('-n', '--name'):
