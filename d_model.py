@@ -41,7 +41,8 @@ class DiscriminatorModel:
         self.num_scale_nets = len(scale_conv_layer_fms)
 
         self.define_graph()
-
+        self.summary_writer.add_graph(self.sess.graph)
+        
     # noinspection PyAttributeOutsideInit
     def define_graph(self):
         """

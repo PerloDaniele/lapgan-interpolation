@@ -93,6 +93,10 @@ YOUTUBE_LIST = None
 YOUTUBE_COUNT = 0
 DOWNLOAD_DIR = get_dir(os.path.join(DATA_DIR, 'Downloads/'))
 
+TEST_EXAMPLES = np.array([])
+TEST_CLIPS_FULL = np.array([])
+TRAIN_EXAMPLES = np.array([])
+
 ##
 # Output
 ##
@@ -147,6 +151,7 @@ MODEL_SAVE_FREQ = 10000  # how often to save the model, in # steps
 ADVERSARIAL = True
 # the training minibatch size
 BATCH_SIZE = 8
+TEST_BATCH_SIZE = 128
 # the number of history frames to give as input to the network
 HIST_LEN = 4
 
@@ -159,7 +164,7 @@ L_NUM = 2
 # the power to which each gradient term is raised in GDL loss
 ALPHA_NUM = 1
 # the percentage of the adversarial loss to use in the combined loss
-LAM_ADV = 0.05
+LAM_ADV = 1
 # the percentage of the lp loss to use in the combined loss
 LAM_LP = 1
 # the percentage of the GDL loss to use in the combined loss
@@ -173,6 +178,7 @@ LAM_GDL = 1
 LRATE_G = 0.00004  # Value in paper is 0.04
 # padding for convolutions in the generator model
 PADDING_G = 'SAME'
+
 # feature maps for each convolution of each scale network in the generator model
 # e.g SCALE_FMS_G[1][2] is the input of the 3rd convolution in the 2nd scale network.
 SCALE_FMS_G = [[3 * HIST_LEN, 128, 256, 128, 3],
@@ -184,16 +190,19 @@ SCALE_KERNEL_SIZES_G = [[3, 3, 3, 3],
                         [5, 3, 3, 5],
                         [5, 3, 3, 3, 3, 5],
                         [7, 5, 5, 5, 5, 7]]
-
-
+'''
+SCALE_FMS_G = [[3 * HIST_LEN, 128, 256, 128, 3]]
+SCALE_KERNEL_SIZES_G = [[3, 3, 3, 3]] 
+'''
 ##
 # Discriminator model
 ##
 
 # learning rate for the discriminator model
-LRATE_D = 0.02
+LRATE_D = 0.02 #0.02
 # padding for convolutions in the discriminator model
-PADDING_D = 'VALID'
+PADDING_D = 'VALID' 
+
 # feature maps for each convolution of each scale network in the discriminator model
 SCALE_CONV_FMS_D = [[3, 64],
                     [3, 64, 128, 128],
@@ -210,3 +219,8 @@ SCALE_FC_LAYER_SIZES_D = [[512, 256, 1],
                           [1024, 512, 1],
                           [1024, 512, 1],
                           [1024, 512, 1]]
+'''
+SCALE_CONV_FMS_D = [[3, 64]]
+SCALE_KERNEL_SIZES_D = [[3]]
+SCALE_FC_LAYER_SIZES_D = [[512, 256, 1]]
+'''

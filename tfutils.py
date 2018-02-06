@@ -7,7 +7,12 @@ def w(shape, stddev=0.01):
     @return A weight layer with the given shape and standard deviation. Initialized with a
             truncated normal distribution.
     """
-    return tf.Variable(tf.truncated_normal(shape, stddev=stddev))
+    #edit Xavier init, last size value is the output layer
+    #stddev = np.sqrt(1/np.prod(shape[:-1]))
+    initializer = tf.contrib.layers.xavier_initializer()
+    return tf.Variable(initializer(shape))
+    
+    #return tf.Variable(tf.truncated_normal(shape, stddev=stddev))
 
 
 def b(shape, const=0.1):

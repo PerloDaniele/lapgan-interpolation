@@ -129,7 +129,7 @@ def process_clip():
 
 	return cropped_clip
 
-def get_train_batch():
+def get_train_batch(offset=0):
 	"""
 	Loads c.BATCH_SIZE clips from the database of preprocessed training clips.
 
@@ -138,8 +138,12 @@ def get_train_batch():
 	"""
 	clips = np.empty([c.BATCH_SIZE, c.TRAIN_HEIGHT, c.TRAIN_WIDTH, (3 * (c.HIST_LEN + 1))],
 					 dtype=np.float32)
+	
+	tr_batch = c.TRAIN_EXAMPLES[offset:(offset+c.BATCH_SIZE)]
+	
 	for i in range(c.BATCH_SIZE):
-		path = c.TRAIN_DIR_CLIPS + str(np.random.choice(c.NUM_CLIPS)) + '.npz'
+		#path = c.TRAIN_DIR_CLIPS + str(tr_batch[i]) + '.npz'
+		path = tr_batch[i]
 		clip = np.load(path)['arr_0']
 
 		clips[i] = clip

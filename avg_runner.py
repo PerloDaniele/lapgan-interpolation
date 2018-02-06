@@ -50,6 +50,7 @@ class AVGRunner:
                                       c.SCALE_KERNEL_SIZES_G)
 
         print('Init variables...')
+        self.summary_writer.add_graph(self.sess.graph)
         self.saver = tf.train.Saver(keep_checkpoint_every_n_hours=2)
         self.sess.run(tf.global_variables_initializer())
 
@@ -58,23 +59,46 @@ class AVGRunner:
             self.saver.restore(self.sess, model_load_path)
             print('Model restored from ' + model_load_path)
             
+        
 
     def train(self):
         """
         Runs a training loop on the model networks.
         """
+        
+        np.random.shuffle(c.TEST_EXAMPLES)
+        np.random.shuffle(c.TRAIN_EXAMPLES)
+        
+        examples_count = 0
+        num_epoch = 0
+        print('EPOCH - ' + str(num_epoch))
         for i in range(self.num_steps):
-            if c.ADVERSARIAL:
+            
+            
+            
+            if c.ADVERSARIAL : 
                 # update discriminator
-                batch = get_train_batch()
+                batch = get_train_batch(examples_count)
                 #print('Training discriminator...')
                 self.d_model.train_step(batch, self.g_model)
 
             # update generator
-            batch = get_train_batch()
+            batch = get_train_batch(examples_count)
+            
+            examples_count += c.BATCH_SIZE
+            
             #print('Training generator...')
             self.global_step = self.g_model.train_step(
                 batch, discriminator=(self.d_model if c.ADVERSARIAL else None))
+
+            #test batch each 'epoch'
+            
+            if examples_count >= c.NUM_CLIPS:
+                np.random.shuffle(c.TRAIN_EXAMPLES)
+                examples_count = 0
+                self.test(c.TEST_BATCH_SIZE, full=True)#bsize = c.NUM_TEST_CLIPS,full=True)
+                num_epoch += 1
+                print('EPOCH - ' + str(num_epoch))
 
             # save the models
             if self.global_step % c.MODEL_SAVE_FREQ == 0:
@@ -88,9 +112,9 @@ class AVGRunner:
 
             # test generator model
             #if self.global_step % c.TEST_FREQ == 0:
-                #self.test()
+            #    self.test()
 
-    def test(self):
+    def test(self, bsize = c.BATCH_SIZE, full=False):
         """
         Runs one test step on the generator network.
         """
@@ -98,14 +122,31 @@ class AVGRunner:
         '''
         batch = get_test_batch(c.BATCH_SIZE)
         '''
-        batch = np.empty([c.BATCH_SIZE, c.FULL_HEIGHT, c.FULL_WIDTH, (3 * (c.HIST_LEN + 1))],
+        
+        batch = np.empty([bsize, c.FULL_HEIGHT, c.FULL_WIDTH, (3 * (c.HIST_LEN + 1))],
                      dtype=np.float32)
         
-        for i in range(c.BATCH_SIZE):
-            path = c.TEST_DIR + str(np.random.choice(c.NUM_TEST_CLIPS)) + '.npz'
-            clip = np.load(path)['arr_0']
-            batch[i] = clip
-                    
+        if full:
+            # can be very memory hungry
+            if c.TEST_CLIPS_FULL.size == 0:
+                c.TEST_CLIPS_FULL = np.empty([c.NUM_TEST_CLIPS, c.FULL_HEIGHT, c.FULL_WIDTH, (3 * (c.HIST_LEN + 1))],
+                     dtype=np.float32)
+                for i in range(c.NUM_TEST_CLIPS):
+                    path = c.TEST_EXAMPLES[i]
+                    clip = np.load(path)['arr_0']
+                    c.TEST_CLIPS_FULL[i] = clip
+            
+            offset = np.random.choice(np.arange(c.NUM_TEST_CLIPS - bsize))
+            batch = c.TEST_CLIPS_FULL[offset:(offset+bsize),:,:,:]
+            
+        else:
+            offset = np.random.choice(np.arange(c.NUM_TEST_CLIPS - bsize))
+            for i in range(bsize):
+                #path = c.TEST_DIR + str(np.random.choice(c.NUM_TEST_CLIPS)) + '.npz'
+                path = c.TEST_EXAMPLES[offset+i]
+                clip = np.load(path)['arr_0']
+                batch[i] = clip
+                        
         self.g_model.test_batch(
             batch, self.global_step)
         
@@ -154,6 +195,7 @@ def main():
         if opt in ('-t', '--test_dir'):
             c.TEST_DIR = arg
             c.NUM_TEST_CLIPS = len(glob(c.TEST_DIR + '*.npz'))
+            c.TEST_EXAMPLES = np.array(glob(c.TEST_DIR + '*.npz'))
             if c.NUM_TEST_CLIPS>0:
                 path = c.TEST_DIR + '0.npz'
                 clip = np.load(path)['arr_0']
@@ -186,6 +228,7 @@ def main():
         if opt in ('-c', '--clips_dir'):
             c.TRAIN_DIR_CLIPS = arg
             c.NUM_CLIPS = len(glob(c.TRAIN_DIR_CLIPS + '*.npz'))
+            c.TRAIN_EXAMPLES = np.array(glob(c.TRAIN_DIR_CLIPS + '*.npz'))
         if opt in ('--adv_w'):
             c.LAM_ADV = float(arg)
         if opt in ('--lp_w'):

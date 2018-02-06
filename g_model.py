@@ -50,6 +50,7 @@ class GeneratorModel:
         self.num_scale_nets = len(scale_layer_fms)
 
         self.define_graph()
+        self.summary_writer.add_graph(self.sess.graph)
 
     # noinspection PyAttributeOutsideInit
     def define_graph(self):
@@ -383,6 +384,9 @@ class GeneratorModel:
         print('PSNR Error     : ', psnr)
         print('Sharpdiff Error: ', sharpdiff)
 
+        self.summary_writer.add_summary(summaries, global_step)
+        print('GeneratorModel: saved Test summaries')
+        
         ##
         # Save images
         ##

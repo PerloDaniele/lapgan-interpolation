@@ -1,0 +1,24 @@
+
+
+
+--Generate Clips (Test Set in this case)
+python process_data.py --num_clips=100 --train_dir=../Videos/ --clips_dir=../Clips/HLEN4_Norm/TestSet --overwrite
+
+--Normlization ([-1,1] Inputs)
+python normalize_clips_folder.py ../Clips/HLEN4_Norm/ ../Clips/HLEN4_Norm/mean_xxx.npz
+
+--visualize
+python display_packed_clips.py ../Clips/HL4_10k/zero_c --mean ../Clips/HL4_10k/zero_c/metadata/mean_800.npz
+
+--Small Training SGD
+CUDA_VISIBLE_DEVICES=0 python avg_runner.py --steps=100000 --clips_dir=../Clips/HLEN4_Norm/ --summary_freq=500 --stats_freq=500 --img_save_fr=1000 --model_save_freq=5000 --name=HL4_SGD --batch_size=1
+
+--Test Set
+CUDA_VISIBLE_DEVICES=0 python avg_runner.py --test_only --test_dir=../Clips/HLEN4_Norm/TestSet/ --summary_freq=500 --stats_freq=500 --img_save_freq=1000 --model_save_freq=5000 --name=HL4_SGD_Test --batch_size=100 --load_path=../Save/Models/HL4_SGD/HL4_SGDmodel.ckpt-50000
+
+
+
+
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64/
+
+

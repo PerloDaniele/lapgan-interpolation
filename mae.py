@@ -12,8 +12,11 @@ from sklearn.metrics import mean_absolute_error
 from utils import normalize_frames
 
 def main():
+	
+	input_mean = False
+	
 	try:
-		opts, _ = getopt.getopt(sys.argv[1:], 'l:d', ['load_path=', 'directory='])
+		opts, _ = getopt.getopt(sys.argv[1:], 'l:d:m:na', ['load_path=', 'directory=', 'mean=', 'no_adversarial'])
 	except getopt.GetoptError:
 		print('Invalid parameters.')
 		sys.exit(2)
@@ -23,17 +26,34 @@ def main():
 			load_path = arg
 		if opt in ('-d', '--directory'):
 			directory = arg
+		if opt in ('-m', '--mean'): #TO DO: BUG DO NOT USE IT
+			input_mean = True
+			mean_file = arg
+		if opt in ('-na', '--no_adversarial'):
+			c.ADVERSARIAL = False
+
 	if not os.path.exists(directory):
 		print('Dir not found.')
 
+	
+	if input_mean:
+		mean = np.load(mean_file)['arr_0']
+        
 	image_paths = sorted(glob(os.path.join(directory, '*')))
 	shape = np.shape(cv2.imread(image_paths[0]))
 	c.FULL_HEIGHT = shape[0]
 	c.FULL_WIDTH  = shape[1]
 	images = np.empty([len(image_paths), c.FULL_HEIGHT, c.FULL_WIDTH, 3])
 	for i, image in enumerate(image_paths):
-		images[i, :, :, :] = cv2.imread(image)
+		out_image = cv2.imread(image)
+		
+		#out_image = out_image[:,:,[2,1,0]]
+		
+		images[i, :, :, :] = out_image#[:,:,[2,1,0]]
 		#images[i, :, :, :] = cv2.cvtColor(cv2.imread(image), cv2.COLOR_BGR2RGB)
+	
+	if input_mean:
+		images = np.clip((images - mean),-1,1)
 
 	runner = AVGRunner(0, load_path)
 	model_name = os.path.basename(load_path)
@@ -54,6 +74,10 @@ def main():
 
 		split_name  = os.path.splitext(os.path.basename(image_paths[i]))
 		name = os.path.join(dir_out, split_name[0] + "_gen" + split_name[1])
+
+		if input_mean:
+			gen_frame = np.clip((gen_frame + mean),-1,1)
+
 		cv2.imwrite(name, gen_frame)
 		
 		'''

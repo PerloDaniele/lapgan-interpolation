@@ -13,7 +13,12 @@ def denormalize_frames(frames):
 def main():
     path = [sys.argv[1]]
     if os.path.isdir(path[0]):
-        path = glob(os.path.join(path[0], '*'))
+        path = glob(os.path.join(path[0], '*.npz'))
+        
+    #usage --zero_c "pathtotrainingsetmean/mean.npz"
+    mean = np.array([])
+    if len(sys.argv)>=4 and sys.argv[2] == '--mean' :
+        mean = np.load(sys.argv[3])['arr_0']
     
     while True:
         clip_file = np.random.choice(path)
@@ -24,9 +29,13 @@ def main():
         w = shape[1]
         num_frames = int(shape[2] / 3)
         frames = np.reshape(clip, (h, w, num_frames, 3))
+        #adding mean
+        if mean.shape[0] != 0:
+            frames = np.clip((frames + mean),-1,1)
+            
         for frame_index in range(num_frames):
             frame = denormalize_frames(frames[:,:,frame_index,:])
-            cv2.imshow(str(frame_index), frame)    
+            cv2.imshow(str(frame_index), frame[:,:,[2,1,0]])    
         key = cv2.waitKey(0)
         cv2.destroyAllWindows()
         if key == 27:

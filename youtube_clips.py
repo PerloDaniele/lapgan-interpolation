@@ -7,6 +7,7 @@ import utils
 from glob import glob
 import cv2
 import time
+import sys
 
 GLOBAL_LOCK = threading.Lock()
 GLOBAL_CLIP_NUM = 0
@@ -87,7 +88,9 @@ def get_full_clips(data_dir, num_clips):
     return clips
 
 def full_clips_from_video(video, num_clips):
-    stream      = cv2.VideoCapture(video) #TODO: cv2 legge in BGR, convertire in RGB?
+     #TODO: cv2 legge in BGR, convertire in RGB? -- Done
+    stream      = cv2.VideoCapture(video)
+    #stream.set(cv2.CAP_PROP_CONVERT_RGB,True)
     width       = int(stream.get(cv2.CAP_PROP_FRAME_WIDTH))
     height      = int(stream.get(cv2.CAP_PROP_FRAME_HEIGHT))
     frame_rate  = int(stream.get(cv2.CAP_PROP_FPS))
@@ -141,4 +144,7 @@ def download_list_youtube(url_list_file):
             im_not_a_robot_i_swear_look_im_so_random = np.random.rand() * 2;
             time.sleep(1 + im_not_a_robot_i_swear_look_im_so_random)
         
-        
+if __name__ == "__main__":
+    c.DOWNLOAD_DIR='./'#sys.argv[2]
+    download_youtube_video('https://www.youtube.com/watch?v=7N3ERfi6WHM') #sys.argv[1])
+
