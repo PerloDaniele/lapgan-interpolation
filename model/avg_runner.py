@@ -211,7 +211,7 @@ def main():
             c.NUM_TEST_CLIPS = len(glob(c.TEST_DIR + '*.npz'))
             c.TEST_EXAMPLES = np.array(glob(c.TEST_DIR + '*.npz'))
             if c.NUM_TEST_CLIPS>0:
-                path = c.TEST_DIR + '0.npz'
+                path = glob(c.TEST_DIR + '*.npz')[0]
                 clip = np.load(path)['arr_0']
                 c.FULL_HEIGHT = clip.shape[0]
                 c.FULL_WIDTH  = clip.shape[1]
