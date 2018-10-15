@@ -11,7 +11,6 @@ from model import constants as c
 from model.tfutils import log10
 
 
-
 ##
 # Data
 ##
