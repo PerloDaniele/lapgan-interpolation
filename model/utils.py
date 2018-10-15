@@ -139,7 +139,6 @@ def get_train_batch(offset=0, c=c):
     clips = np.empty([c.BATCH_SIZE, c.TRAIN_HEIGHT, c.TRAIN_WIDTH, (3 * (c.HIST_LEN + 1))],
                      dtype=np.float32)
 
-    print(c.TRAIN_EXAMPLES)
     tr_batch = c.TRAIN_EXAMPLES[offset:(offset+c.BATCH_SIZE)]
 
     for i in range(c.BATCH_SIZE):
@@ -177,7 +176,7 @@ def get_test_batch(test_batch_size):
 # TODO: Unit test error functions.
 
 def ssim_error(gen_frames,gt_frames):
-    return 1 - tf.reduce_mean(tf.image.ssim(gen_frames, gt_frames, max_val=2))
+    return 0 # TODO tf version1.4.1 1 - tf.reduce_mean(tf.image.ssim(gen_frames, gt_frames, max_val=2))
 
 def psnr_error(gen_frames, gt_frames):
     """
