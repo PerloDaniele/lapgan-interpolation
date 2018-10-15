@@ -80,12 +80,13 @@ class AVGRunner:
             if c.ADVERSARIAL :
                 for k in range(c.Critic_cycles):
                     # update discriminator
-                    batch = get_train_batch(examples_count)
+                    print(c.TRAIN_EXAMPLES)
+                    batch = get_train_batch(examples_count , c)
                     print('Training discriminator, step: ' + str(k))
                     self.d_model.train_step(batch, self.g_model)
 
             # update generator
-            batch = get_train_batch(examples_count)
+            batch = get_train_batch(examples_count, c)
             
             examples_count += c.BATCH_SIZE
             

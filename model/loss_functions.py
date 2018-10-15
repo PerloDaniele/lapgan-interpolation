@@ -137,7 +137,8 @@ def wasserstein_loss(preds, targets, is_generator = False):
     #1 is real, 0 is fake
 
     if not is_generator:
-        return - tf.squeeze(tf.boolean_mask(preds, targets)) + tf.squeeze(tf.boolean_mask(preds, 1 - targets))
+        targets = targets >= 0.5 #to boolean tensor for tf compatibility on escher
+        return - tf.squeeze(tf.boolean_mask(preds, targets)) + tf.squeeze(tf.boolean_mask(preds, tf.logical_not(targets) ))
     else:
         return - tf.squeeze(preds)
 
