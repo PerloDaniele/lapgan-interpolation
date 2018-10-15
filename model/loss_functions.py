@@ -25,7 +25,11 @@ def combined_loss(gen_frames, gt_frames, d_preds, lam_adv=1, lam_lp=1, lam_gdl=1
 
     loss = lam_lp * lp_loss(gen_frames, gt_frames, l_num)
     loss += lam_gdl * gdl_loss(gen_frames, gt_frames, alpha)
-    if c.ADVERSARIAL: loss += lam_adv * adv_loss(d_preds, tf.ones([batch_size, 1]))
+    if c.ADVERSARIAL:
+        if c.WASSERSTEIN:
+            loss += lam_adv * adv_loss(d_preds, tf.zeros([batch_size, 1]), is_generator = True)
+        else:
+            loss += lam_adv * adv_loss(d_preds, tf.ones([batch_size, 1]))
 
     return loss
 
@@ -99,9 +103,9 @@ def gdl_loss(gen_frames, gt_frames, alpha):
     return tf.reduce_mean(tf.stack(scale_losses))
 
 
-def adv_loss(preds, labels):
+def adv_loss(preds, labels, is_generator = False):
     """
-    Calculates the sum of BCE losses between the predicted classifications and true labels.
+    Calculates the sum of adv losses between the predicted classifications and true labels.
 
     @param preds: The predicted classifications at each scale.
     @param labels: The true labels. (Same for every scale).
@@ -111,8 +115,36 @@ def adv_loss(preds, labels):
     # calculate the loss for each scale
     scale_losses = []
     for i in range(len(preds)):
-        loss = bce_loss(preds[i], labels)
+        if c.WASSERSTEIN:
+            loss = wasserstein_loss(preds[i], labels, is_generator)
+        else:
+            loss = bce_loss(preds[i], labels)
         scale_losses.append(loss)
-
     # condense into one tensor and avg
     return tf.reduce_mean(tf.stack(scale_losses))
+
+def wasserstein_loss(preds, targets, is_generator = False):
+    """
+    Calculates the sum of wasserstein losses between predictions and ground truths.
+
+    @param preds: A 1xN tensor. The predicted classifications of each frame.
+    @param targets: A 1xN tensor The target labels for each frame. (Either 0 or 1).
+                    Targets are supposed to be all "fake" computing the generator loss.
+    @param is_generator: wasserstein loss for the generator and critic networks are different. Default is False
+
+    @return: The sum of binary cross-entropy losses.
+    """
+    #1 is real, 0 is fake
+
+    if not is_generator:
+        return - tf.squeeze(tf.boolean_mask(preds, targets)) + tf.squeeze(tf.boolean_mask(preds, 1 - targets))
+    else:
+        return - tf.squeeze(preds)
+
+
+def grad_penality_loss(x_hat, d_hat):
+
+    gradients = tf.gradients(d_hat, x_hat)[0]
+    slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), axis=list(range(1, x_hat.shape.ndims))))
+    return tf.squeeze((slopes - 1.0) ** 2)
+

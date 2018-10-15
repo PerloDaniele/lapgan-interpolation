@@ -73,27 +73,32 @@ class AVGRunner:
         num_epoch = 0
         print('EPOCH - ' + str(num_epoch))
         for i in range(self.num_steps):
-            
-            
-            
-            if c.ADVERSARIAL : 
-                # update discriminator
-                batch = get_train_batch(examples_count)
-                #print('Training discriminator...')
-                self.d_model.train_step(batch, self.g_model)
+
+
+            print('Processing.. {} / {}'.format(examples_count + c.BATCH_SIZE, c.NUM_CLIPS))
+
+            if c.ADVERSARIAL :
+                for k in range(c.Critic_cycles):
+                    # update discriminator
+                    batch = get_train_batch(examples_count)
+                    print('Training discriminator, step: ' + str(k))
+                    self.d_model.train_step(batch, self.g_model)
 
             # update generator
             batch = get_train_batch(examples_count)
             
             examples_count += c.BATCH_SIZE
             
-            #print('Training generator...')
+            print('Training generator...')
             self.global_step = self.g_model.train_step(
                 batch, discriminator=(self.d_model if c.ADVERSARIAL else None))
 
             #test batch each 'epoch'
-            
-            if examples_count >= c.NUM_CLIPS:
+
+
+            print('Processed {} / {}'.format(examples_count, c.NUM_CLIPS))
+
+            if examples_count >= c.NUM_CLIPS - c.BATCH_SIZE:
                 np.random.shuffle(c.TRAIN_EXAMPLES)
                 examples_count = 0
                 self.test(c.TEST_BATCH_SIZE, full=True)#bsize = c.NUM_TEST_CLIPS,full=True)
@@ -125,7 +130,8 @@ class AVGRunner:
         
         batch = np.empty([bsize, c.FULL_HEIGHT, c.FULL_WIDTH, (3 * (c.HIST_LEN + 1))],
                      dtype=np.float32)
-        
+
+
         if full:
             # can be very memory hungry
             if c.TEST_CLIPS_FULL.size == 0:
@@ -134,9 +140,13 @@ class AVGRunner:
                 for i in range(c.NUM_TEST_CLIPS):
                     path = c.TEST_EXAMPLES[i]
                     clip = np.load(path)['arr_0']
-                    c.TEST_CLIPS_FULL[i] = clip
-            
-            offset = np.random.choice(np.arange(c.NUM_TEST_CLIPS - bsize))
+                    if c.HIST_LEN == 2:
+                        c.TEST_CLIPS_FULL[i, :, :, :-3] = clip[:, :, range(3, 9)]
+                        c.TEST_CLIPS_FULL[i, :, :, -3:] = clip[:, :, range(12, 15)]
+                    else:
+                        c.TEST_CLIPS_FULL[i] = clip
+
+            offset = np.random.choice(np.arange(c.NUM_TEST_CLIPS - bsize)) if c.NUM_TEST_CLIPS - bsize > 0 else 0
             batch = c.TEST_CLIPS_FULL[offset:(offset+bsize),:,:,:]
             
         else:
@@ -145,7 +155,11 @@ class AVGRunner:
                 #path = c.TEST_DIR + str(np.random.choice(c.NUM_TEST_CLIPS)) + '.npz'
                 path = c.TEST_EXAMPLES[offset+i]
                 clip = np.load(path)['arr_0']
-                batch[i] = clip
+                if c.HIST_LEN == 2:
+                    batch[i, :, :, :-3] = clip[:, :, range(3, 9)]
+                    batch[i, :, :, -3:] = clip[:, :, range(12, 15)]
+                else:
+                    batch[i] = clip
                         
         self.g_model.test_batch(
             batch, self.global_step)
@@ -241,7 +255,7 @@ def main():
             c.LRATE_G = float(arg)
         if opt in ('--lrateD'):
             c.LRATE_D = float(arg)
-            
+
     # set test frame dimensions
     #assert os.path.exists(c.TEST_DIR)
     #c.FULL_HEIGHT, c.FULL_WIDTH = c.get_test_frame_dims()

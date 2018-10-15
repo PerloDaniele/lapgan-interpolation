@@ -1,13 +1,14 @@
 import numpy as np
 import getopt
-import sys
-from glob import glob
 import os
+import sys
+sys.path.append(os.path.abspath('../'))
+from glob import glob
 
-import constants as c
-from utils import process_clip
+from model import constants as c
+from model.utils import process_clip
 
-import youtube_clips as yt
+from video_utils import youtube_clips as yt
 
 
 def process_training_data(num_clips):

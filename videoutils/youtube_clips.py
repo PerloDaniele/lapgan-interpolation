@@ -2,12 +2,17 @@ from pytube import YouTube
 import threading
 import os
 import numpy as np
-import constants as c
-import utils
+import getopt
+
+import sys
+sys.path.append(os.path.abspath('../'))
+
+from model import constants as c
+from model import utils
 from glob import glob
 import cv2
 import time
-import sys
+
 
 GLOBAL_LOCK = threading.Lock()
 GLOBAL_CLIP_NUM = 0
@@ -88,7 +93,7 @@ def get_full_clips(data_dir, num_clips):
     return clips
 
 def full_clips_from_video(video, num_clips):
-     #TODO: cv2 legge in BGR, convertire in RGB? -- Done
+     #GBR Frames
     stream      = cv2.VideoCapture(video)
     #stream.set(cv2.CAP_PROP_CONVERT_RGB,True)
     width       = int(stream.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -145,6 +150,19 @@ def download_list_youtube(url_list_file):
             time.sleep(1 + im_not_a_robot_i_swear_look_im_so_random)
         
 if __name__ == "__main__":
-    c.DOWNLOAD_DIR='./'#sys.argv[2]
-    download_youtube_video('https://www.youtube.com/watch?v=7N3ERfi6WHM') #sys.argv[1])
+
+    try:
+        opts, _ = getopt.getopt(sys.argv[1:], 'v:d', ['video=', 'dir='])
+    except getopt.GetoptError:
+        print('Invalid parameters. use -v \'youtubeUrl\' -d \'pathDir\'')
+        sys.exit(2)
+
+    video = 'https://www.youtube.com/watch?v=7N3ERfi6WHM'
+    for opt, arg in opts:
+        if opt in ('-v', '--video'):
+            video = arg
+        if opt in ('-d', '--dir'):
+            c.DOWNLOAD_DIR = arg
+
+    download_youtube_video(video)
 

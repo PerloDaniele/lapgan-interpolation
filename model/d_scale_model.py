@@ -80,6 +80,8 @@ class DScaleModel:
                         last_out_height, c.PADDING_D, self.kernel_sizes[i], 1)
                     last_out_width = conv_out_size(
                         last_out_width, c.PADDING_D, self.kernel_sizes[i], 1)
+                self.conv_ws = conv_ws
+                self.conv_bs = conv_bs
 
             # fully-connected
             with tf.name_scope('full-connected'):
@@ -94,12 +96,15 @@ class DScaleModel:
                     fc_ws.append(w([self.fc_layer_sizes[i],
                                     self.fc_layer_sizes[i + 1]]))
                     fc_bs.append(b([self.fc_layer_sizes[i + 1]]))
+                self.fc_ws = fc_ws
+                self.fc_bs = fc_bs
+
 
         ##
         # Forward pass calculation
         ##
 
-        def generate_predictions():
+        def generate_predictions(predinput = self.input_frames):
             """
             Runs self.input_frames through the network to generate a prediction from 0
             (generated img) to 1 (real img).
@@ -108,7 +113,7 @@ class DScaleModel:
             """
             with tf.name_scope('calculation'):
                 preds = tf.zeros([self.batch_size, 1])
-                last_input = self.input_frames
+                last_input = predinput #self.input_frames
 
                 # convolutions
                 with tf.name_scope('convolutions'):
@@ -136,13 +141,15 @@ class DScaleModel:
 
                         # Activate with ReLU (or Sigmoid for last layer)
                         if i == len(fc_ws) - 1:
-                            preds = tf.sigmoid(preds)
+                            if not c.WASSERSTEIN:
+                                preds = tf.sigmoid(preds)
                         else:
                             preds = tf.nn.relu(preds)
 
                 # clip preds between [.1, 0.9] for stability
                 with tf.name_scope('clip'):
-                    preds = tf.clip_by_value(preds, 0.1, 0.9)
+                    if not c.WASSERSTEIN:
+                        preds = tf.clip_by_value(preds, 0.1, 0.9)
 
                 return preds
 
@@ -151,3 +158,52 @@ class DScaleModel:
         ##
         # Training handled by DiscriminatorModel
         ##
+
+    def generate_predictions(self, predinput ):
+        """
+        Runs predinput through the network to generate a prediction from 0
+        (generated img) to 1 (real img).
+
+        @return: A tensor of predictions of shape [self.batch_size x 1].
+        """
+        with tf.name_scope('calculation'):
+            preds = tf.zeros([self.batch_size, 1])
+            last_input = predinput  # self.input_frames
+
+            # convolutions
+            with tf.name_scope('convolutions'):
+                for i in range(len(self.conv_ws)):
+                    # Convolve layer and activate with ReLU
+                    preds = tf.nn.conv2d(
+                        last_input, self.conv_ws[i], [1, 1, 1, 1], padding=c.PADDING_D)
+                    preds = tf.nn.relu(preds + self.conv_bs[i])
+
+                    last_input = preds
+
+            # pooling layer
+            with tf.name_scope('pooling'):
+                preds = tf.nn.max_pool(preds, [1, 2, 2, 1], [1, 2, 2, 1], padding=c.PADDING_D)
+
+            # flatten preds for dense layers
+            shape = preds.get_shape().as_list()
+            # -1 can be used as one dimension to size dynamically
+            preds = tf.reshape(preds, [-1, shape[1] * shape[2] * shape[3]])
+
+            # fully-connected layers
+            with tf.name_scope('fully-connected'):
+                for i in range(len(self.fc_ws)):
+                    preds = tf.matmul(preds, self.fc_ws[i]) + self.fc_bs[i]
+
+                    # Activate with ReLU (or Sigmoid for last layer)
+                    if i == len(self.fc_ws) - 1:
+                        if not c.WASSERSTEIN:
+                            preds = tf.sigmoid(preds)
+                    else:
+                        preds = tf.nn.relu(preds)
+
+            # clip preds between [.1, 0.9] for stability
+            with tf.name_scope('clip'):
+                if not c.WASSERSTEIN:
+                    preds = tf.clip_by_value(preds, 0.1, 0.9)
+
+            return preds

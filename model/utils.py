@@ -4,13 +4,15 @@ import numpy as np
 from cv2 import imread
 from glob import glob
 import os
+import sys
+import sys
+sys.path.append(os.path.abspath('../'))
 
 import cv2
+from model import constants as c
+from model.tfutils import log10
 
-import constants as c
-from tfutils import log10
-
-import youtube_clips as yt
+from videoutils import youtube_clips as yt
 
 ##
 # Data
@@ -41,7 +43,7 @@ def denormalize_frames(frames):
 	@return: The denormalized frames.
 	"""
 	new_frames = frames + 1
-	new_frames *= (255 / 2)
+	new_frames *= 127.5 #(255 / 2)
 	# noinspection PyUnresolvedReferences
 	new_frames = new_frames.astype(np.uint8)
 
@@ -140,13 +142,17 @@ def get_train_batch(offset=0):
 					 dtype=np.float32)
 	
 	tr_batch = c.TRAIN_EXAMPLES[offset:(offset+c.BATCH_SIZE)]
-	
+
 	for i in range(c.BATCH_SIZE):
 		#path = c.TRAIN_DIR_CLIPS + str(tr_batch[i]) + '.npz'
 		path = tr_batch[i]
 		clip = np.load(path)['arr_0']
-
-		clips[i] = clip
+		#TODO remove constants
+		if c.HIST_LEN==2:
+			clips[i,:,:,:-3] = clip[:,:,range(3,9)]
+			clips[i,:,:,-3:] = clip[:, :, range(12, 15)]
+		else:
+			clips[i] = clip
 
 	return clips
 
@@ -170,6 +176,9 @@ def get_test_batch(test_batch_size):
 
 # TODO: Add SSIM error http://www.cns.nyu.edu/pub/eero/wang03-reprint.pdf
 # TODO: Unit test error functions.
+
+def ssim_error(gen_frames,gt_frames):
+	return 1 - tf.reduce_mean(tf.image.ssim(gen_frames, gt_frames, max_val=2))
 
 def psnr_error(gen_frames, gt_frames):
 	"""

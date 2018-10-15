@@ -1,5 +1,5 @@
-from avg_runner import AVGRunner
-import constants as c
+from Code.model.avg_runner import AVGRunner
+from Code.model import constants as c
 import getopt
 import sys
 import os

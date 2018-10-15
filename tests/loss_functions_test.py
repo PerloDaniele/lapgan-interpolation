@@ -1,4 +1,4 @@
-from loss_functions import *
+from ..model.loss_functions import *
 
 sess = tf.Session()
 BATCH_SIZE = 2

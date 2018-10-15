@@ -3,7 +3,7 @@ import numpy as np
 from skimage.transform import resize
 
 from d_scale_model import DScaleModel
-from loss_functions import adv_loss
+from loss_functions import adv_loss, grad_penality_loss
 import constants as c
 
 # noinspection PyShadowingNames
@@ -82,11 +82,29 @@ class DiscriminatorModel:
             with tf.name_scope('training'):
                 # global loss is the combined loss from every scale network
                 self.global_loss = adv_loss(self.scale_preds, self.labels)
+
+                if c.WASSERSTEIN and c.W_GP:
+                    epsilon = tf.random_uniform([], 0.0, 1.0)
+                    grad_penality = []
+                    for scale_net in self.scale_nets:
+                        fake, real = tf.split(scale_net.input_frames,2)
+                        self.x_hat = real * epsilon + (1 - epsilon) * fake
+                        self.d_hat = scale_net.generate_predictions(self.x_hat)
+                        grad_penality.append(grad_penality_loss(self.x_hat, self.d_hat))
+                    self.global_loss += c.LAM_GP * tf.reduce_mean(grad_penality)
+
                 self.global_step = tf.Variable(0, trainable=False, name='global_step')
-                self.optimizer = tf.train.GradientDescentOptimizer(c.LRATE_D, name='optimizer')
-                self.train_op = self.optimizer.minimize(self.global_loss,
+                self.optimizer = tf.train.AdamOptimizer(c.LRATE_D, name='optimizer')
+                self.train_op_ = self.optimizer.minimize(self.global_loss,
                                                         global_step=self.global_step,
                                                         name='train_op')
+
+                # Clipping to enforce 1-Lipschitz function
+                if c.WASSERSTEIN and not c.W_GP:
+                    with tf.control_dependencies([self.train_op_]):
+                        self.train_op = tf.group(*(tf.assign(var, tf.clip_by_value(var, -c.W_Clip, c.W_Clip)) for var in tf.trainable_variables() if 'discriminator' in var.name))
+                else:
+                    self.train_op = self.train_op_
 
                 # add summaries to visualize in TensorBoard
                 loss_summary = tf.summary.scalar('loss_D', self.global_loss)
@@ -113,6 +131,7 @@ class DiscriminatorModel:
         # Get generated frames from GeneratorModel
         ##
 
+        generator.training = False
         g_feed_dict = {generator.input_frames_train: input_frames,
                        generator.gt_frames_train: gt_output_frames}
         g_scale_preds = self.sess.run(generator.scale_preds_train, feed_dict=g_feed_dict)
@@ -169,10 +188,17 @@ class DiscriminatorModel:
         ##
         input_frames = np.clip(input_frames, -1.0, 1.0) #TODO
         feed_dict = self.build_feed_dict(input_frames, gt_output_frames, generator)
+        '''
+        print('_________PREDS____')
+        print(self.sess.run(self.scale_preds,feed_dict=feed_dict))
+        print('_________LABEL____')
+        print(self.sess.run(self.labels, feed_dict=feed_dict))'''
 
-        _, global_loss, global_step, summaries = self.sess.run(
+        a, global_loss, global_step, summaries = self.sess.run(
             [self.train_op, self.global_loss, self.global_step, self.summaries],
             feed_dict=feed_dict)
+        #a = [var for var in tf.trainable_variables() if 'discriminator' in var.name][0]
+        #print(self.sess.run(a,feed_dict=feed_dict))
 
         ##
         # User output

@@ -6,7 +6,7 @@ from glob import glob
 
 def denormalize_frames(frames):
     new_frames = frames + 1
-    new_frames *= (255 / 2)
+    new_frames *= 127.5 #(255 / 2)
     new_frames = new_frames.astype(np.uint8)
     return new_frames
 

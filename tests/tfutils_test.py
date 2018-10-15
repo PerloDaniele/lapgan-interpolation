@@ -1,4 +1,4 @@
-from tfutils import *
+from ..model.tfutils import *
 
 imgs = tf.constant(np.ones([2, 2, 2, 3]))
 sess = tf.Session()

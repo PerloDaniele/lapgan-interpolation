@@ -3,12 +3,11 @@ import numpy as np
 #from scipy.misc import imsave
 from cv2 import imwrite
 from skimage.transform import resize
-from copy import deepcopy
 import os
 
 import constants as c
 from loss_functions import combined_loss
-from utils import psnr_error, sharp_diff_error, normalize_frames, denormalize_frames
+from utils import ssim_error, psnr_error, sharp_diff_error, normalize_frames, denormalize_frames
 from tfutils import w, b
 
 def imsave(path, img):
@@ -17,7 +16,7 @@ def imsave(path, img):
 # noinspection PyShadowingNames
 class GeneratorModel:
     def __init__(self, session, summary_writer, height_train, width_train, height_test,
-                 width_test, scale_layer_fms, scale_kernel_sizes):
+                 width_test, scale_layer_fms, scale_kernel_sizes, training = True):
         """
         Initializes a GeneratorModel.
 
@@ -48,15 +47,18 @@ class GeneratorModel:
         self.scale_layer_fms = scale_layer_fms
         self.scale_kernel_sizes = scale_kernel_sizes
         self.num_scale_nets = len(scale_layer_fms)
+        self.training = training
 
         self.define_graph()
         self.summary_writer.add_graph(self.sess.graph)
+
 
     # noinspection PyAttributeOutsideInit
     def define_graph(self):
         """
         Sets up the model graph in TensorFlow.
         """
+
         with tf.name_scope('generator'):
             ##
             # Data
@@ -64,14 +66,14 @@ class GeneratorModel:
 
             with tf.name_scope('data'):
                 self.input_frames_train = tf.placeholder(
-                    tf.float32, shape=[None, self.height_train, self.width_train, 3 * c.HIST_LEN])
+                    tf.float32, shape=[None, self.height_train, self.width_train, 3 * c.HIST_LEN],name='input_frames_train')
                 self.gt_frames_train = tf.placeholder(
-                    tf.float32, shape=[None, self.height_train, self.width_train, 3])
+                    tf.float32, shape=[None, self.height_train, self.width_train, 3],name='gt_frames_train')
 
                 self.input_frames_test = tf.placeholder(
-                    tf.float32, shape=[None, self.height_test, self.width_test, 3 * c.HIST_LEN])
+                    tf.float32, shape=[None, self.height_test, self.width_test, 3 * c.HIST_LEN],name='input_frames_test')
                 self.gt_frames_test = tf.placeholder(
-                    tf.float32, shape=[None, self.height_test, self.width_test, 3])
+                    tf.float32, shape=[None, self.height_test, self.width_test, 3],name='gt_frames_test')
 
                 # use variable batch_size for more flexibility
                 self.batch_size_train = tf.shape(self.input_frames_train)[0]
@@ -126,8 +128,16 @@ class GeneratorModel:
 
                             # perform convolutions
                             with tf.name_scope('convolutions'):
+                                conv_num = len(self.scale_kernel_sizes[scale_num])
+                                include_skip = c.INCLUDE_SKIP and self.scale_layer_fms[scale_num] == self.scale_layer_fms[scale_num][1:-1][::-1]
+                                early_conv =[]
                                 for i in range(len(self.scale_kernel_sizes[scale_num])):
                                     # Convolve layer
+
+                                    #symmetrical depth for enc and decoder convolutions
+                                    if include_skip and i > conv_num//2:
+                                        preds += early_conv[i - conv_num//2]
+
                                     preds = tf.nn.conv2d(
                                         preds, ws[i], [1, 1, 1, 1], padding=c.PADDING_G)
 
@@ -135,7 +145,11 @@ class GeneratorModel:
                                     if i == len(self.scale_kernel_sizes[scale_num]) - 1:
                                         preds = tf.nn.tanh(preds + bs[i])
                                     else:
+                                        preds = tf.layers.batch_normalization(preds,training = self.training)
                                         preds = tf.nn.relu(preds + bs[i])
+
+                                    if include_skip and i < conv_num//2:
+                                        early_conv[i] = preds
 
                             return preds, scale_gts
 
@@ -195,9 +209,14 @@ class GeneratorModel:
                                                  self.scale_gts_train,
                                                  self.d_scale_preds,
                                                  c.LAM_ADV, c.LAM_ADV, c.LAM_GDL)
+                self.psnr_error_train = psnr_error(self.scale_preds_train[-1],
+                                                   self.gt_frames_train)
+                self.global_loss += c.LAM_PNSR * self.psnr_error_train
                 self.global_step = tf.Variable(0, trainable=False)
                 self.optimizer = tf.train.AdamOptimizer(learning_rate=c.LRATE_G, name='optimizer')
-                self.train_op = self.optimizer.minimize(self.global_loss,
+                update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+                with tf.control_dependencies(update_ops):
+                    self.train_op = self.optimizer.minimize(self.global_loss,
                                                         global_step=self.global_step,
                                                         name='train_op')
 
@@ -216,23 +235,32 @@ class GeneratorModel:
                                                    self.gt_frames_train)
                 self.sharpdiff_error_train = sharp_diff_error(self.scale_preds_train[-1],
                                                               self.gt_frames_train)
+                self.ssim_error_train = ssim_error(self.scale_preds_train[-1],
+                                                    self.gt_frames_train)
+
                 self.psnr_error_test = psnr_error(self.scale_preds_test[-1],
                                                   self.gt_frames_test)
                 self.sharpdiff_error_test = sharp_diff_error(self.scale_preds_test[-1],
+                                                             self.gt_frames_test)
+                self.ssim_error_test = ssim_error(self.scale_preds_test[-1],
                                                              self.gt_frames_test)
                 # train error summaries
                 summary_psnr_train = tf.summary.scalar('train_PSNR',
                                                        self.psnr_error_train)
                 summary_sharpdiff_train = tf.summary.scalar('train_SharpDiff',
                                                             self.sharpdiff_error_train)
-                self.summaries_train += [summary_psnr_train, summary_sharpdiff_train]
+                summary_ssim_train = tf.summary.scalar('train_SSIM',
+                                                            self.ssim_error_train)
+                self.summaries_train += [summary_psnr_train, summary_sharpdiff_train,summary_ssim_train]
 
                 # test error
                 summary_psnr_test = tf.summary.scalar('test_PSNR',
                                                       self.psnr_error_test)
                 summary_sharpdiff_test = tf.summary.scalar('test_SharpDiff',
                                                            self.sharpdiff_error_test)
-                self.summaries_test += [summary_psnr_test, summary_sharpdiff_test]
+                summary_ssim_test = tf.summary.scalar('test_SSIM',
+                                                           self.ssim_error_test)
+                self.summaries_test += [summary_psnr_test, summary_sharpdiff_test, summary_ssim_test]
 
             # add summaries to visualize in TensorBoard
             self.summaries_train = tf.summary.merge(self.summaries_train)
@@ -259,8 +287,11 @@ class GeneratorModel:
         ##
         # Train
         ##
+        self.training = True
+        placeholder_frames = np.empty([0, self.height_test, self.width_test, 3 * c.HIST_LEN])
+        placeholder_gt = np.empty([0, self.height_test, self.width_test, 3])
+        feed_dict = {self.input_frames_train: input_frames, self.gt_frames_train: gt_frames, self.input_frames_test:placeholder_frames , self.gt_frames_test:placeholder_gt}
 
-        feed_dict = {self.input_frames_train: input_frames, self.gt_frames_train: gt_frames}
 
         if c.ADVERSARIAL:
             # Run the generator first to get generated frames
@@ -288,6 +319,7 @@ class GeneratorModel:
         ##
         # User output
         ##
+
         if global_step % c.STATS_FREQ == 0:
             print('GeneratorModel : Step ', global_step)
             print('                 Global Loss    : ', global_loss)
@@ -374,7 +406,10 @@ class GeneratorModel:
         ##
         # Run the network
         ##
-        feed_dict = {self.input_frames_test: input_frames,
+        self.training = False
+        placeholder_frames = np.empty([0, self.height_train, self.width_train, 3 * c.HIST_LEN])
+        placeholder_gt = np.empty([0, self.height_train, self.width_train, 3 ])
+        feed_dict = {self.input_frames_train:placeholder_frames , self.gt_frames_train:placeholder_gt ,self.input_frames_test: input_frames,
                      self.gt_frames_test: gt_frames}
         gen_imgs, psnr, sharpdiff, summaries = self.sess.run([self.scale_preds_test[-1],
                                                            self.psnr_error_test,
