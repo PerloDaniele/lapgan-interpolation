@@ -5,14 +5,12 @@ from cv2 import imread
 from glob import glob
 import os
 import sys
-import sys
 sys.path.append(os.path.abspath('../'))
 
-import cv2
 from model import constants as c
 from model.tfutils import log10
 
-from videoutils import youtube_clips as yt
+
 
 ##
 # Data
@@ -111,6 +109,7 @@ def process_clip():
 	@return: An array of shape [c.TRAIN_HEIGHT, c.TRAIN_WIDTH, (3 * (c.HIST_LEN + 1))].
 			 A frame sequence with values normalized in range [-1, 1].
 	"""
+	from videoutils import youtube_clips as yt
 	#clip = get_full_clips(c.TRAIN_DIR, 1)[0]
 	clip = yt.get_full_clips(c.TRAIN_DIR, 1)[0]
 	shape = np.shape(clip)
