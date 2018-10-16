@@ -145,7 +145,10 @@ class GeneratorModel:
                                     if i == len(self.scale_kernel_sizes[scale_num]) - 1:
                                         preds = tf.nn.tanh(preds + bs[i])
                                     else:
-                                        preds = tf.layers.batch_normalization(preds,training = self.training)
+                                        tf.Print(preds,[preds],message=str(preds.shape[0]))
+
+                                        if preds.shape[0]>0:
+                                            preds = tf.layers.batch_normalization(preds,training = self.training)
                                         preds = tf.nn.relu(preds + bs[i])
 
                                     if include_skip and i < conv_num//2:
